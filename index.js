@@ -1,8 +1,25 @@
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
-const cors = require('cors')
-app.use(cors())
+const mongoose = require("mongoose");
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // Add this line to parse JSON requests
+
+const cors = require('cors');
+app.use(cors());
+const URI ="mongodb+srv://ibsam:mongoDB1@cluster0.sdpjjkx.mongodb.net/van_life_database?retryWrites=true&w=majority&appName=Cluster0"
+
+let userSchema = mongoose.Schema({
+    firstname: String,
+    lastname: String,
+    email: String,
+    password: String,
+});
+let userModel = mongoose.model('users', userSchema);
+
+mongoose.connect(URI)
+    .then(() => { console.log("database connected") })
+    .catch((err) => { console.log(err) });
 
 const vans = [
     { id: 1, name: "Modest Explorer", price: 60, description: "The Modest Explorer is a van designed to get you out of the house and into nature. This beauty is equipped with solar panels, a composting toilet, a water tank and kitchenette. The idea is that you can pack up your home and escape for a weekend or even longer!", imageUrl: "https://assets.scrimba.com/advanced-react/react-router/modest-explorer.png", type: "simple", hostId: "123",btnstyle:"w-fit capitalize inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white bg-orange-500 rounded-lg hover:bg-orange-300 focus:ring-4 focus:outline-none focus:bg-orange-400 dark:bg-orange-400 dark:hover:bg-blue-700 dark:focus:ring-blue-800"},
@@ -18,6 +35,59 @@ app.get('/api/vans', (req, res) => {
     res.send(vans);
 });
 
+app.post("/user", async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        // Check if the email already exists in the database
+        const existingUser = await userModel.findOne({ email });
+
+        // If email already exists, return error
+        if (existingUser) {
+            return res.status(400).json({ status: false, message: "Email already exists" });
+        }
+
+        // If email doesn't exist, save the user data
+        const newUser = new userModel(req.body);
+        await newUser.save();
+
+        res.status(201).json({ status: true, message: "User saved successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: false, message: "Internal server error" });
+    }
+});
+
+
+app.post("/check", async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        // Find a user with the provided email
+        const user = await userModel.findOne({ email });
+
+        // If no user found, return error
+        if (!user) {
+            return res.status(404).json({ status: false, message: "User not found" });
+        }
+
+        // Check if the password matches
+        if (user.password !== password) {
+            return res.status(401).json({ status: false, message: "Incorrect password" });
+        }
+
+        // If email and password match, user is signed in
+        console.log("User signed in");
+        res.status(200).json({ status: true, message: "User signed in successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: false, message: "Internal server error" });
+    }
+});
+
+
+
+
 app.get('/api/vans/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const van = vans.find(van => van.id === id);
@@ -28,8 +98,8 @@ app.get('/api/vans/:id', (req, res) => {
     }
 });
 
-app.get('/api/host/vans', (req, res) => {
 
+app.get('/api/host/vans', (req, res) => {
     const hostVans = vans.filter(van => van.hostId === '123');
     res.send(hostVans);
 });
@@ -43,7 +113,6 @@ app.get('/api/host/vans/:id', (req, res) => {
         res.send(van);
     }
 });
-
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
