@@ -36,7 +36,7 @@ app.get('/api/vans', (req, res) => {
 });
 
 app.post("/user", async (req, res) => {
-    const { email } = req.body;
+    const  {email}  = req.body;
 
     try {
         // Check if the email already exists in the database
@@ -54,7 +54,7 @@ app.post("/user", async (req, res) => {
         res.status(201).json({ status: true, message: "User saved successfully" });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: false, message: "Internal server error" });
+        res.status(500).json({ status: false, message: "Internal server err" });
     }
 });
 
